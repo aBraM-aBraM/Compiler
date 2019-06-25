@@ -10,8 +10,7 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			//Console.WriteLine(ulong.TryParse("3",out ulong ___Ulong ));
-			new Compiler("string b = 3; ; int a = 5; func(value) = 22"); 
+			new Compiler("string b = 3; ; int a = 5; func(value) = 22;"); 
 		}
 	}
 	class Compiler
@@ -28,6 +27,16 @@ namespace Compiler
 		{
 			"+","-","=","*","/","%","=="
 		}; // operator types
+
+		// dictionary used to customize the language
+		Dictionary<string, char> dict = new Dictionary<string, char>()
+		{
+			{"openMethod",'(' },
+			{"closeMethod",')' },
+			{"openDesc",'{' },
+			{"closeDec",'}' },
+			{"closeStatement",';' }
+		};
 
 		public Compiler(string code)
 		{
@@ -48,8 +57,10 @@ namespace Compiler
 
 		// the unidentified current string
 		string currStr = "";
-		// number of open round bracket '('
-		int openFuncNum = 0;
+		// number of open round brackets '('
+		int openMethods = 0;
+		// number of open curly brackets '{'
+		int openDesc = 0;
 
 		public void Compile()
 		{
@@ -61,9 +72,9 @@ namespace Compiler
 			{
 				Debug(currStr + "|| " + i);
 				// if reached the end of the code with objects and without at the end ';' throw exception
-				if (i == code.Length - 1 && code[i] != ';' && currStr != "") ThrowException("Expected ';'"); 
-				// if there's a ';' reached end of statement : adding new statement
-				if (code[i] == ';')
+				if (i == code.Length - 1 && code[i] != dict["closeStatement"] && currStr != "") ThrowException("Expected '" + dict["closeStatement"] + "'"); 
+				// if there's a closingStatementChar reached end of statement : adding new statement
+				if (code[i] == dict["closeStatement"])
 				{
 					AddStatement();
 				}
@@ -80,12 +91,12 @@ namespace Compiler
 					}
 				}
 				// if an opening method char appeared '('
-				if(code[i] == '(')
+				if(code[i] == dict["openMethod"])
 				{
 					// if there's no method name throw exception
-					if (currStr == "") ThrowException("Unexpected '('");
+					if (currStr == "") ThrowException("Unexpected '" + dict["openMethod"] + "'");
 					// else increase the number of open method
-					openFuncNum++;
+					openMethods++;
 					// if we opened a method the object behind it 
 					// must be a method name
 					AddPiece(Identifier.funcName);
@@ -93,11 +104,11 @@ namespace Compiler
 					continue;
 				}
 				// if a closing method char appeared ')'
-				if(code[i] == ')')
+				if(code[i] == dict["closeMethod"])
 				{
 					// if there are no open methods there's no reason
 					// to end one : throw exception
-					if (openFuncNum < 1) ThrowException("Unexpected ')'");
+					if (openMethods < 1) ThrowException("Unexpected '" + dict["closeMethod"] + "'");
 					// ending a method
 					else
 					{
@@ -113,14 +124,14 @@ namespace Compiler
 							AddPiece(Identifier.variableName);
 						}
 						// decreasing the number of open methods
-						openFuncNum--;
+						openMethods--;
 						// skip to the next index
 						continue;
 					}
 					
 				}
 				// increase the current raw unidentified string
-				if (code[i] != ' ')
+				if (code[i] != ' ' && code[i] != dict["closeMethod"])
 				{
 					currStr += code[i];
 				}
@@ -181,10 +192,14 @@ namespace Compiler
 				Console.ForegroundColor = ConsoleColor.Cyan;
 				Console.WriteLine("Statement Number: " + statements.IndexOf(s));
 				Console.ForegroundColor = ConsoleColor.White;
+				string formattedStatement = "";
 				foreach(Piece p in s.pieces)
 				{
 					Console.WriteLine(p.name + " : " + p.type);
+					formattedStatement += " " + p.name;
 				}
+				Console.ForegroundColor = ConsoleColor.Magenta;
+				Console.WriteLine(formattedStatement);
 			}
 		} // print method used after compiling
 
@@ -201,14 +216,27 @@ namespace Compiler
 		private void AddStatement()
 		{
 			SmallCompile();
+			// check if any object were identified (compiled)
 			if (compiledCode.Count > 0)
 			{
+				bool viableStatement = false;
+				foreach(Piece p in compiledCode)
+				{
+					if (p.type == Identifier.operators || p.type == Identifier.funcName) viableStatement = true;
+				}
+				if (!viableStatement) ThrowException("Only assignment, increment, decrement, call, await," +
+					"and new object expressions can be used as a statement");
+				if (openMethods != 0) ThrowException("Expected ')'");
+				if (openDesc != 0) ThrowException("Expected '}'");
+
 				Statement newStatement = new Statement(compiledCode);
 				Debug("Added Statement (" + compiledCode.Count + ')', ConsoleColor.Magenta);
 				compiledCode = new List<Piece>();
 				statements.Add(newStatement);
 			}
 			currStr = "";
+			openDesc = 0;
+			openMethods = 0;
 		} // adds an array of identified objects to the list of arrays of identified objects (statements)
 
 		struct Piece
@@ -221,6 +249,7 @@ namespace Compiler
 				this.name = name;
 				this.type = type;
 			}
+
 		} // identified object
 		struct Statement
 		{
