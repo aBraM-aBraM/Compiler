@@ -16,67 +16,94 @@ namespace Compiler
 	}
 	class Compiler
 	{
+		// identifier for each object
 		enum Identifier { variableName, funcName, variableType, value, operators }
 
 		string[] varTypes = new string[]
 		{
 			"int","string","float","char"
-		};
+		}; // variable types
 
 		string[] operatorTypes = new string[]
 		{
 			"+","-","=","*","/","%","=="
-		};
+		}; // operator types
 
 		public Compiler(string code)
 		{
 			this.code = code;
 			Compile();
-		}
+		} // constructor
 
+		//	<code>
+		//	a string of the whole code
+		//	that will be compiled 
+		//	as a raw string 
+		//	</code>
 		string code;
+		// list of identified pieces
 		List<Piece> compiledCode = new List<Piece>();
+		// list of identified statements (list of arrays of pieces)
 		List<Statement> statements = new List<Statement>();
 
+		// the unidentified current string
 		string currStr = "";
+		// number of open round bracket '('
 		int openFuncNum = 0;
 
 		public void Compile()
 		{
+			// Main function : compiles the code
 			Debug(code, ConsoleColor.Magenta);
 			Debug("");
+			// loops through the whole code
 			for (int i = 0; i < code.Length; i++)
 			{
 				Debug(currStr + "|| " + i);
+				// if reached the end of the code with objects and without at the end ';' throw exception
 				if (i == code.Length - 1 && code[i] != ';' && currStr != "") ThrowException("Expected ';'"); 
+				// if there's a ';' reached end of statement : adding new statement
 				if (code[i] == ';')
 				{
 					AddStatement();
 				}
-				// if currentStr is a variableType
+				// main compiling 
 				if(code[i] == ' ')
 				{
+					// skip spaces if there were no objects yet
 					if (currStr == "") continue;
-					if (currStr == ";") AddStatement();
+					// if the current unidentified string
+					// was not empty identify (compile) it
 					else
 					{
 						SmallCompile();
 					}
 				}
-				// if opening func
+				// if an opening method char appeared '('
 				if(code[i] == '(')
 				{
+					// if there's no method name throw exception
 					if (currStr == "") ThrowException("Unexpected '('");
+					// else increase the number of open method
 					openFuncNum++;
+					// if we opened a method the object behind it 
+					// must be a method name
 					AddPiece(Identifier.funcName);
+					// skip to the next index 
 					continue;
 				}
-				// if closing func
+				// if a closing method char appeared ')'
 				if(code[i] == ')')
 				{
+					// if there are no open methods there's no reason
+					// to end one : throw exception
 					if (openFuncNum < 1) ThrowException("Unexpected ')'");
+					// ending a method
 					else
 					{
+						// the method's input is always a variable
+						// the variable can be either a value or a variableName
+
 						if (ulong.TryParse(currStr, out ulong numResult))
 						{
 							AddPiece(Identifier.value);
@@ -85,17 +112,21 @@ namespace Compiler
 						{
 							AddPiece(Identifier.variableName);
 						}
+						// decreasing the number of open methods
 						openFuncNum--;
+						// skip to the next index
 						continue;
 					}
 					
 				}
+				// increase the current raw unidentified string
 				if (code[i] != ' ')
 				{
 					currStr += code[i];
 				}
 				Debug(currStr + "|| " + i);
 			}
+			// print the compiled code in an organized manner
 			Print();
 		}
 
@@ -103,7 +134,7 @@ namespace Compiler
 		{
 			Console.ForegroundColor = color;
 			Console.WriteLine(text.ToString());
-		}
+		} // a neat debugging tool
 
 		private void ThrowException(string exception)
 		{
@@ -112,7 +143,7 @@ namespace Compiler
 			Console.Beep();
 			Console.WriteLine("Error: " + exception);
 			Environment.Exit(1);
-		}
+		} // exceptions
 
 		private void SmallCompile()
 		{
@@ -136,7 +167,7 @@ namespace Compiler
 			{
 				AddPiece(Identifier.variableName);
 			}
-		}
+		} // compiling method
 
 		private void Print()
 		{
@@ -155,7 +186,7 @@ namespace Compiler
 					Console.WriteLine(p.name + " : " + p.type);
 				}
 			}
-		}
+		} // print method used after compiling
 
 		private void AddPiece(Identifier identifier)
 		{
@@ -165,7 +196,7 @@ namespace Compiler
 				Debug(currStr + " : " + identifier, ConsoleColor.Cyan);
 				currStr = "";
 			}
-		}
+		} // adds an identified object to the list of identified objects (pieces)
 
 		private void AddStatement()
 		{
@@ -178,19 +209,19 @@ namespace Compiler
 				statements.Add(newStatement);
 			}
 			currStr = "";
-		}
+		} // adds an array of identified objects to the list of arrays of identified objects (statements)
 
 		struct Piece
 		{
-			public readonly string name;
-			public readonly Identifier type;
+			public readonly string name; // name of the identified object
+			public readonly Identifier type; // identifier (variable / method / operator / etc...)
 
 			public Piece(string name, Identifier type)
 			{
 				this.name = name;
 				this.type = type;
 			}
-		}
+		} // identified object
 		struct Statement
 		{
 			public readonly Piece[] pieces;
@@ -198,6 +229,6 @@ namespace Compiler
 			{
 				this.pieces = pieces.ToArray();
 			}
-		}
+		} // array of identified objects 
 	}
 }
