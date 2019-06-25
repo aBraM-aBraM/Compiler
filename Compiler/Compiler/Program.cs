@@ -10,8 +10,8 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			string code = "int a = 5 b = 3 func(xd)";
-			new Compiler(code);
+			//Console.WriteLine(ulong.TryParse("3",out ulong ___Ulong ));
+			new Compiler("string b = 3; ; int a = 5; func(value) = 22"); 
 		}
 	}
 	class Compiler
@@ -31,6 +31,7 @@ namespace Compiler
 		public Compiler(string code)
 		{
 			this.code = code;
+			Compile();
 		}
 
 		string code;
@@ -38,42 +39,77 @@ namespace Compiler
 		List<Statement> statements = new List<Statement>();
 
 		string currStr = "";
+		int openFuncNum = 0;
 
 		public void Compile()
 		{
-			int openFuncNum = 0;
+			Debug(code, ConsoleColor.Magenta);
+			Debug("");
 			for (int i = 0; i < code.Length; i++)
 			{
+				Debug(currStr + "|| " + i);
+				if (i == code.Length - 1 && code[i] != ';' && currStr != "") ThrowException("Expected ';'"); 
+				if (code[i] == ';')
+				{
+					AddStatement();
+				}
 				// if currentStr is a variableType
 				if(code[i] == ' ')
 				{
-					if (currStr == null) i++;
+					if (currStr == "") continue;
+					if (currStr == ";") AddStatement();
 					else
 					{
 						SmallCompile();
 					}
 				}
+				// if opening func
 				if(code[i] == '(')
 				{
+					if (currStr == "") ThrowException("Unexpected '('");
 					openFuncNum++;
-					i++;
 					AddPiece(Identifier.funcName);
+					continue;
 				}
+				// if closing func
 				if(code[i] == ')')
 				{
 					if (openFuncNum < 1) ThrowException("Unexpected ')'");
 					else
 					{
-						AddPiece(Identifier.variableName);
+						if (ulong.TryParse(currStr, out ulong numResult))
+						{
+							AddPiece(Identifier.value);
+						}
+						else
+						{
+							AddPiece(Identifier.variableName);
+						}
+						openFuncNum--;
+						continue;
 					}
+					
 				}
-				currStr += code[i];
+				if (code[i] != ' ')
+				{
+					currStr += code[i];
+				}
+				Debug(currStr + "|| " + i);
 			}
+			Print();
+		}
+
+		private void Debug<T>(T text, ConsoleColor color = ConsoleColor.DarkYellow)
+		{
+			Console.ForegroundColor = color;
+			Console.WriteLine(text.ToString());
 		}
 
 		private void ThrowException(string exception)
 		{
-			Console.BackgroundColor = ConsoleColor.DarkRed;
+			Console.BackgroundColor = ConsoleColor.Red;
+			Console.ForegroundColor = ConsoleColor.White;
+			Console.Beep();
 			Console.WriteLine("Error: " + exception);
 			Environment.Exit(1);
 		}
@@ -88,34 +124,60 @@ namespace Compiler
 			// if we found an operator
 			if (operatorTypes.Contains(currStr))
 			{
-				AddPiece(Identifier.variableType);
+				AddPiece(Identifier.operators);
+			}
+			// if we found a fresh variable (3 , 'c' , "st") etc..
+			if(ulong.TryParse(currStr,out ulong numResult))
+			{
+				AddPiece(Identifier.value);
+			}
+			// if we found a variable name
+			if(compiledCode.Count > 0 && compiledCode[compiledCode.Count - 1].type == Identifier.variableType)
+			{
+				AddPiece(Identifier.variableName);
 			}
 		}
 
 		private void Print()
 		{
-			Console.BackgroundColor = ConsoleColor.White;
-			Console.ForegroundColor = ConsoleColor.Black;
-			foreach(Piece p in compiledCode)
+			Console.ForegroundColor = ConsoleColor.Red;
+			Console.WriteLine("===================");
+			Console.WriteLine("COMPILED STATEMENTS");
+			Console.WriteLine("===================");
+			Console.ForegroundColor = ConsoleColor.Green;
+			foreach(Statement s in statements)
 			{
-				Console.WriteLine(p.name + " : " + p.type);
+				Console.ForegroundColor = ConsoleColor.Cyan;
+				Console.WriteLine("Statement Number: " + statements.IndexOf(s));
+				Console.ForegroundColor = ConsoleColor.White;
+				foreach(Piece p in s.pieces)
+				{
+					Console.WriteLine(p.name + " : " + p.type);
+				}
 			}
 		}
 
 		private void AddPiece(Identifier identifier)
 		{
-			if (currStr != null)
+			if (currStr != "")
 			{
 				compiledCode.Add(new Piece(currStr, identifier));
+				Debug(currStr + " : " + identifier, ConsoleColor.Cyan);
 				currStr = "";
 			}
 		}
 
 		private void AddStatement()
 		{
-			Statement newStatement = new Statement(compiledCode);
-			compiledCode = new List<Piece>();
-			statements.Add(newStatement);
+			SmallCompile();
+			if (compiledCode.Count > 0)
+			{
+				Statement newStatement = new Statement(compiledCode);
+				Debug("Added Statement (" + compiledCode.Count + ')', ConsoleColor.Magenta);
+				compiledCode = new List<Piece>();
+				statements.Add(newStatement);
+			}
+			currStr = "";
 		}
 
 		struct Piece
