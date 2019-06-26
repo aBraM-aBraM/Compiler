@@ -16,7 +16,7 @@ namespace Compiler
 	class Compiler
 	{
 		// identifier for each object
-		enum Identifier { variableName, funcName, variableType, value, operators }
+		enum Identifier { variableName, funcName, variableType, value, operators , assigner}
 
 		string[] varTypes = new string[]
 		{
@@ -25,8 +25,13 @@ namespace Compiler
 
 		string[] operatorTypes = new string[]
 		{
-			"+","-","=","*","/","%","=="
+			"+","-","*","/","%","=="
 		}; // operator types
+
+		string[] assignments = new string[]
+		{
+			"=","+=","-=","*=","/="
+		};
 
 		// dictionary used to customize the language
 		Dictionary<string, char> dict = new Dictionary<string, char>()
@@ -61,6 +66,8 @@ namespace Compiler
 		int openMethods = 0;
 		// number of open curly brackets '{'
 		int openDesc = 0;
+		// boolean : currentStatement has assignment
+		bool hasAssigned = false;
 
 		public void Compile()
 		{
@@ -158,6 +165,14 @@ namespace Compiler
 
 		private void SmallCompile()
 		{
+			if (assignments.Contains(currStr))
+			{
+				if (hasAssigned) ThrowException("Statements contain only one assignment");
+				else
+				{
+					AddPiece(Identifier.assigner);
+				}
+			}
 			// if we found a varType
 			if (varTypes.Contains(currStr))
 			{
@@ -237,6 +252,7 @@ namespace Compiler
 			currStr = "";
 			openDesc = 0;
 			openMethods = 0;
+			hasAssigned = false;
 		} // adds an array of identified objects to the list of arrays of identified objects (statements)
 
 		struct Piece
