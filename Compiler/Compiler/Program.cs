@@ -10,7 +10,7 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			new Compiler("int choko = 3;Update(choko);"); 
+			new Compiler("int choko = 3; Update(choko)"); 
 		}
 	}
 	class Compiler
@@ -199,8 +199,8 @@ namespace Compiler
 
 		private void Debug<T>(T text, ConsoleColor color = ConsoleColor.DarkYellow)
 		{
-			Console.ForegroundColor = color;
-			Console.WriteLine(text.ToString());
+			//Console.ForegroundColor = color;
+			//Console.WriteLine(text.ToString());
 		} // a neat debugging tool
 
 		private void ThrowException(string exception)
@@ -315,7 +315,7 @@ namespace Compiler
 				bool viableStatement = false;
 				foreach(Piece p in compiledCode)
 				{
-					if (p.type == Identifier.operators || p.type == Identifier.funcName || p.type == Identifier.assigner) viableStatement = true;
+					if (p.type == Identifier.operators || p.type == Identifier.funcName || p.type == Identifier.assigner || p.type == Identifier.declareVariable) viableStatement = true;
 				}
 				if (!viableStatement) ThrowException("Only assignment, increment, decrement, call, await," +
 					"and new object expressions can be used as a statement");
