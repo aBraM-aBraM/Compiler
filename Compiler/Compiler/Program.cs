@@ -10,13 +10,13 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			new Compiler("string b = 3; ; int a = 5; func(value) = 22;"); 
+			new Compiler("string a = 5; a = a + 2;"); 
 		}
 	}
 	class Compiler
 	{
 		// identifier for each object
-		enum Identifier { variableName, funcName, variableType, value, operators , assigner}
+		enum Identifier { variableName, funcName, variableType, value, operators , assigner, declareVariable}
 
 		string[] varTypes = new string[]
 		{
@@ -32,6 +32,8 @@ namespace Compiler
 		{
 			"=","+=","-=","*=","/="
 		};
+
+		List<string> variables = new List<string>();
 
 		// dictionary used to customize the language
 		Dictionary<string, char> dict = new Dictionary<string, char>()
@@ -138,12 +140,13 @@ namespace Compiler
 					
 				}
 				// increase the current raw unidentified string
-				if (code[i] != ' ' && code[i] != dict["closeMethod"])
+				if (code[i] != ' ' && code[i] != dict["closeStatement"])
 				{
 					currStr += code[i];
 				}
 				Debug(currStr + "|| " + i);
 			}
+
 			// print the compiled code in an organized manner
 			Print();
 		}
@@ -165,11 +168,17 @@ namespace Compiler
 
 		private void SmallCompile()
 		{
+			// if we found an existing variable;
+			if (variables.Contains(currStr))
+			{
+				AddPiece(Identifier.variableName);
+			}
 			if (assignments.Contains(currStr))
 			{
 				if (hasAssigned) ThrowException("Statements contain only one assignment");
 				else
 				{
+					hasAssigned = true;
 					AddPiece(Identifier.assigner);
 				}
 			}
@@ -191,7 +200,12 @@ namespace Compiler
 			// if we found a variable name
 			if(compiledCode.Count > 0 && compiledCode[compiledCode.Count - 1].type == Identifier.variableType)
 			{
-				AddPiece(Identifier.variableName);
+				if (variables.Contains(currStr)) ThrowException("Can't declare " + currStr + "as it is declared in a different scope");
+				else
+				{
+					variables.Add(currStr);
+					AddPiece(Identifier.declareVariable);
+				}
 			}
 		} // compiling method
 
@@ -237,7 +251,7 @@ namespace Compiler
 				bool viableStatement = false;
 				foreach(Piece p in compiledCode)
 				{
-					if (p.type == Identifier.operators || p.type == Identifier.funcName) viableStatement = true;
+					if (p.type == Identifier.operators || p.type == Identifier.funcName || p.type == Identifier.assigner) viableStatement = true;
 				}
 				if (!viableStatement) ThrowException("Only assignment, increment, decrement, call, await," +
 					"and new object expressions can be used as a statement");
