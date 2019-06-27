@@ -10,7 +10,7 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			new Compiler("int choko = 3; Update(choko)"); 
+			new Compiler("int choko;"); 
 		}
 	}
 	class Compiler
@@ -77,7 +77,7 @@ namespace Compiler
 		// boolean : opened a char
 		bool openChar = false;
 
-		public void Compile()
+		private Statement[] Compile()
 		{
 			// Main function : compiles the code
 			Debug(code, ConsoleColor.Magenta);
@@ -193,8 +193,7 @@ namespace Compiler
 			// print the compiled code in an organized manner
 			Print();
 
-			// await before closing program
-			Console.ReadKey();
+			return statements.ToArray();
 		}
 
 		private void Debug<T>(T text, ConsoleColor color = ConsoleColor.DarkYellow)
