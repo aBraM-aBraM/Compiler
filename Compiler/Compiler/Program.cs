@@ -10,7 +10,7 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			new Compiler("string a = " + '"' + "asg21" + '"' + ";"); 
+			new Compiler("int choko = 3;Update(choko);"); 
 		}
 	}
 	class Compiler
@@ -134,10 +134,11 @@ namespace Compiler
 						{
 							AddPiece(Identifier.value);
 						}
-						else
+						else if (variables.Contains(currStr))
 						{
 							AddPiece(Identifier.variableName);
 						}
+						else ThrowException("Unidentified ", currStr, " in the current scope", 1);
 						// decreasing the number of open methods
 						openMethods--;
 						// skip to the next index
