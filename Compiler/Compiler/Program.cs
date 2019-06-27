@@ -10,7 +10,7 @@ namespace Compiler
 	{
 		static void Main(string[] args)
 		{
-			new Compiler("string a = 5; a = a + 2;"); 
+			new Compiler("string a = " + '"' + "asg21" + '"' + ";"); 
 		}
 	}
 	class Compiler
@@ -42,7 +42,9 @@ namespace Compiler
 			{"closeMethod",')' },
 			{"openDesc",'{' },
 			{"closeDec",'}' },
-			{"closeStatement",';' }
+			{"closeStatement",';' },
+			{"string",'"' },
+			{"char","'"[0] }
 		};
 
 		public Compiler(string code)
@@ -70,6 +72,10 @@ namespace Compiler
 		int openDesc = 0;
 		// boolean : currentStatement has assignment
 		bool hasAssigned = false;
+		// boolean : opened a string
+		bool openStr = false;
+		// boolean : opened a char
+		bool openChar = false;
 
 		public void Compile()
 		{
@@ -99,7 +105,7 @@ namespace Compiler
 						SmallCompile();
 					}
 				}
-				// if an opening method char appeared '('
+				// if an opening method char has appeared '('
 				if(code[i] == dict["openMethod"])
 				{
 					// if there's no method name throw exception
@@ -112,7 +118,7 @@ namespace Compiler
 					// skip to the next index 
 					continue;
 				}
-				// if a closing method char appeared ')'
+				// if a closing method char has appeared ')'
 				if(code[i] == dict["closeMethod"])
 				{
 					// if there are no open methods there's no reason
@@ -139,6 +145,42 @@ namespace Compiler
 					}
 					
 				}
+				// if a string (opener/closer) has appeared
+				if (code[i] == dict["string"])
+				{
+					if (openStr)
+					{
+						// the currStr is a string 
+						AddPiece(Identifier.value);
+						openStr = false;
+						continue;
+					}
+					else
+					{
+						openStr = true;
+						continue;
+					}
+				}
+				// if a char (opener/closer) has appeared
+				if (code[i] == dict["char"])
+				{
+					if (openChar)
+					{
+						if (currStr.Length != 1) ThrowException("Too many characters in character literal");
+						else
+						{
+							// the currStr is a char (character)
+							AddPiece(Identifier.value);
+							openChar = false;
+							continue;
+						}
+					}
+					else
+					{
+						openChar = true;
+						continue;
+					}
+				}
 				// increase the current raw unidentified string
 				if (code[i] != ' ' && code[i] != dict["closeStatement"])
 				{
@@ -149,6 +191,9 @@ namespace Compiler
 
 			// print the compiled code in an organized manner
 			Print();
+
+			// await before closing program
+			Console.ReadKey();
 		}
 
 		private void Debug<T>(T text, ConsoleColor color = ConsoleColor.DarkYellow)
@@ -159,21 +204,39 @@ namespace Compiler
 
 		private void ThrowException(string exception)
 		{
-			Console.BackgroundColor = ConsoleColor.Red;
-			Console.ForegroundColor = ConsoleColor.White;
+			Console.ResetColor();
+			Console.ForegroundColor = ConsoleColor.Red;
 			Console.Beep();
 			Console.WriteLine("Error: " + exception);
 			Environment.Exit(1);
-		} // exceptions
+		} // exception
+
+		private void ThrowException(string first,string second = "",string third = "",int colorIndex = -1)
+		{
+			ConsoleColor color = ConsoleColor.Cyan;
+			Console.ResetColor();
+			Console.ForegroundColor = ConsoleColor.Red;
+			if (colorIndex == 0) Console.ForegroundColor = color;
+			else Console.ForegroundColor = ConsoleColor.Red;
+			Console.Write(first);
+			if (colorIndex == 1) Console.ForegroundColor = color;
+			else Console.ForegroundColor = ConsoleColor.Red;
+			Console.Write(second);
+			if (colorIndex == 2) Console.ForegroundColor = color;
+			else Console.ForegroundColor = ConsoleColor.Red;
+			Console.WriteLine(third);
+
+			Environment.Exit(1);
+		} // formatted exception
 
 		private void SmallCompile()
 		{
 			// if we found an existing variable;
-			if (variables.Contains(currStr))
+			if (variables.Contains(currStr) && compiledCode[compiledCode.Count - 1].type != Identifier.variableType)
 			{
 				AddPiece(Identifier.variableName);
 			}
-			if (assignments.Contains(currStr))
+			else if (assignments.Contains(currStr))
 			{
 				if (hasAssigned) ThrowException("Statements contain only one assignment");
 				else
@@ -183,24 +246,24 @@ namespace Compiler
 				}
 			}
 			// if we found a varType
-			if (varTypes.Contains(currStr))
+			else if (varTypes.Contains(currStr))
 			{
 				AddPiece(Identifier.variableType);
 			}
 			// if we found an operator
-			if (operatorTypes.Contains(currStr))
+			else if (operatorTypes.Contains(currStr))
 			{
 				AddPiece(Identifier.operators);
 			}
 			// if we found a fresh variable (3 , 'c' , "st") etc..
-			if(ulong.TryParse(currStr,out ulong numResult))
+			else if(ulong.TryParse(currStr,out ulong numResult))
 			{
 				AddPiece(Identifier.value);
 			}
 			// if we found a variable name
-			if(compiledCode.Count > 0 && compiledCode[compiledCode.Count - 1].type == Identifier.variableType)
+			else if(compiledCode.Count > 0 && compiledCode[compiledCode.Count - 1].type == Identifier.variableType)
 			{
-				if (variables.Contains(currStr)) ThrowException("Can't declare " + currStr + "as it is declared in a different scope");
+				if (variables.Contains(currStr)) ThrowException("Cant declare ",currStr," as it's declared in another scope",1);
 				else
 				{
 					variables.Add(currStr);
@@ -255,13 +318,20 @@ namespace Compiler
 				}
 				if (!viableStatement) ThrowException("Only assignment, increment, decrement, call, await," +
 					"and new object expressions can be used as a statement");
-				if (openMethods != 0) ThrowException("Expected ')'");
-				if (openDesc != 0) ThrowException("Expected '}'");
+				if (openMethods != 0) ThrowException("Expected '", ")", "'", 1);
+				if (openDesc != 0) ThrowException("Expected '", "'", "}", 1);
+				if (openStr) ThrowException("Expected '", '"'.ToString(), "'", 1);
+				if (openChar) ThrowException("Expected '", "'", "'", 1);
 
 				Statement newStatement = new Statement(compiledCode);
 				Debug("Added Statement (" + compiledCode.Count + ')', ConsoleColor.Magenta);
 				compiledCode = new List<Piece>();
 				statements.Add(newStatement);
+			}
+			else
+			{
+				ThrowException("Only assignment, increment, decrement, call, await," +
+					"and new object expressions can be used as a statement");
 			}
 			currStr = "";
 			openDesc = 0;
